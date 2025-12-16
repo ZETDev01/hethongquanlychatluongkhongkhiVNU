@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Connection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        #log {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Firebase Connection Test</h1>
+        
+        <div id="status" class="status info">
+            Đang kiểm tra kết nối...
+        </div>
+        
+        <div>
+            <button onclick="testConnection()">🔄 Test Lại</button>
+            <button onclick="document.getElementById('log').innerHTML = ''">🗑️ Xóa Log</button>
+            <button onclick="location.href='index.html'">🏠 Về Trang Chủ</button>
+        </div>
+        
+        <h3>📝 Console Log:</h3>
+        <pre id="log"></pre>
+        
+        <h3>📊 Dữ liệu nhận được:</h3>
+        <pre id="data">Chưa có dữ liệu...</pre>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0suD1WtscodYWjfTtiJr8mSSgnmZiMs0",
+            authDomain: "esp32-giamsatchatluongkhongkhi.firebaseapp.com",
+            databaseURL: "https://esp32-giamsatchatluongkhongkhi-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "esp32-giamsatchatluongkhongkhi",
+            storageBucket: "esp32-giamsatchatluongkhongkhi.firebasestorage.app",
+            messagingSenderId: "272142145490",
+            appId: "1:272142145490:web:e98daece8a1ef9d1ea5a0b",
+            measurementId: "G-MJPYK9PBX1"
+        };
+
+        let app, database;
+        
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logEl.innerHTML += `[${timestamp}] ${icon} ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function testConnection() {
+            const statusEl = document.getElementById('status');
+            const dataEl = document.getElementById('data');
+            
+            log('🚀 Starting Firebase connection test...');
+            
+            try {
+                // Initialize Firebase
+                log('📦 Initializing Firebase app...');
+                app = initializeApp(firebaseConfig);
+                log('✅ Firebase app initialized', 'success');
+                
+                // Get database reference
+                log('🔗 Getting database reference...');
+                database = getDatabase(app);
+                log('✅ Database reference obtained', 'success');
+                
+                // Listen to data
+                log('👂 Setting up data listener...');
+                const dataRef = ref(database, '/');
+                
+                onValue(dataRef, (snapshot) => {
+                    const data = snapshot.val();
+                    
+                    if (data) {
+                        log('✅ Data received successfully!', 'success');
+                        statusEl.className = 'status success';
+                        statusEl.innerHTML = '✅ Kết nối Firebase thành công!<br>Đang nhận dữ liệu real-time...';
+                        
+                        dataEl.textContent = JSON.stringify(data, null, 2);
+                        
+                        log(`📊 Temperature: ${data.t}°C`);
+                        log(`💧 Humidity: ${data.h}%`);
+                        log(`☁️ CO: ${data.co} ppm`);
+                        log(`🫁 PM2.5: ${data.pm25} μg/m³`);
+                    } else {
+                        log('⚠️ No data available', 'error');
+                        statusEl.className = 'status error';
+                        statusEl.textContent = '⚠️ Kết nối thành công nhưng chưa có dữ liệu';
+                        dataEl.textContent = 'Chưa có dữ liệu trong database';
+                    }
+                }, (error) => {
+                    log(`❌ Firebase error: ${error.code} - ${error.message}`, 'error');
+                    statusEl.className = 'status error';
+                    statusEl.textContent = `❌ Lỗi: ${error.message}`;
+                    dataEl.textContent = `Error: ${error.code}\n${error.message}`;
+                });
+                
+                log('👍 Listener setup complete');
+                
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+                statusEl.className = 'status error';
+                statusEl.textContent = `❌ Lỗi khởi tạo: ${error.message}`;
+            }
+        }
+
+        // Auto test on load
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 500);
+        });
+        
+        // Expose for button
+        window.testConnection = testConnection;
+    </script>
+</body>
+</html>
